@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>The Lily</title>
+<style>
+  :root {
+    --fl-speed: 0.8s;
+    --lily-color: #ffb6c1;
+    --glow-color: rgba(255, 182, 193, 0.8);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #000;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    overflow: hidden;
+    perspective: 1000px;
+    transition: background 2s ease;
+  }
+
+  .christmas-bg { 
+    background: radial-gradient(circle at center, #3a0d0d, #0d2b18, #000) !important; 
+  }
+
+  #fwCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+
+  /* --- THE LILY (Centered & Connected) --- */
+  .flower {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 5;
+    animation: moving-flower 4s linear infinite;
+    display: none; /* Hidden until password is correct */
+  }
+
+  .flower__line {
+    width: 1.5vmin;
+    height: 55vmin;
+    background-image: linear-gradient(to top, #051a0d, #1a4d2e);
+    border-radius: 4vmin;
+    position: relative;
+  }
+
+  .lily__head {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 5vmin;
+    height: 5vmin;
+  }
+
+  .petal {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 12vmin;
+    height: 25vmin;
+    background: linear-gradient(to top, #fff, var(--lily-color));
+    border-radius: 50% 50% 20% 20%;
+    transform-origin: bottom center;
+    opacity: 0.95;
+    box-shadow: 0 0 4vmin var(--glow-color);
+  }
+
+  .p1 { transform: translateX(-50%) rotate(0deg); }
+  .p2 { transform: translateX(-50%) rotate(72deg); }
+  .p3 { transform: translateX(-50%) rotate(144deg); }
+  .p4 { transform: translateX(-50%) rotate(216deg); }
+  .p5 { transform: translateX(-50%) rotate(288deg); }
+
+  .flower__center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 5vmin;
+    height: 5vmin;
+    background: radial-gradient(#fff700, #ff8c00);
+    border-radius: 50%;
+    z-index: 20;
+    box-shadow: 0 0 6vmin #ffd700;
+  }
+
+  /* --- UI ELEMENTS --- */
+  .ui-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 100;
+    text-align: center;
+    width: 80%;
+  }
+
+  #passBox {
+    background: rgba(0,0,0,0.7);
+    padding: 30px;
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--lily-color);
+  }
+
+  h2 { color: white; margin-bottom: 15px; font-family: sans-serif; letter-spacing: 2px; }
+  
+  input {
+    width: 100%;
+    padding: 12px;
+    border-radius: 25px;
+    border: none;
+    text-align: center;
+    font-size: 18px;
+    margin-bottom: 15px;
+  }
+
+  .btn {
+    padding: 12px 30px;
+    border-radius: 25px;
+    border: none;
+    background: var(--lily-color);
+    font-weight: bold;
+    cursor: pointer;
+  }
+
+  #merryLabel {
+    display: none;
+    color: white;
+    font-size: 8vw;
+    font-family: 'serif';
+    text-shadow: 0 0 20px #ff0000;
+    margin-bottom: 20px;
+  }
+
+  #seeLetterBtn {
+    display: none;
+    position: absolute;
+    bottom: 5vh;
+    z-index: 100;
+    padding: 15px 40px;
+    background: linear-gradient(90deg, #ffb6c1, #ff8c00);
+    border-radius: 50px;
+    text-decoration: none;
+    color: black;
+    font-weight: bold;
+    box-shadow: 0 0 20px rgba(255,182,193,0.5);
+  }
+
+  @keyframes moving-flower {
+    0%, 100% { transform: translateX(-50%) rotate(-2deg); }
+    50% { transform: translateX(-50%) rotate(2deg); }
+  }
+</style>
+</head>
+<body>
+
+  <canvas id="fwCanvas"></canvas>
+
+  <div class="ui-container" id="ui">
+    <h1 id="merryLabel">MERRY CHRISTMAS</h1>
+    <div id="passBox">
+      <h2>ENTER PASSWORD</h2>
+      <input type="password" id="passInput" placeholder="••••">
+      <br>
+      <button class="btn" onclick="check()">ENTER</button>
+    </div>
+  </div>
+
+  <div class="flower" id="lilyFlower">
+    <div class="flower__line">
+      <div class="lily__head">
+        <div class="petal p1"></div><div class="petal p2"></div>
+        <div class="petal p3"></div><div class="petal p4"></div>
+        <div class="petal p5"></div>
+        <div class="flower__center"></div>
+      </div>
+    </div>
+  </div>
+
+  <a href="https://yazu5.github.io/zanie/" id="seeLetterBtn">SEE LETTER</a>
+
+  <script>
+    let audioCtx = null;
+
+    function playPop() {
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.frequency.setValueAtTime(150 + Math.random() * 100, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+      gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+      gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.1);
+      osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+    }
+
+    function check() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const val = document.getElementById("passInput").value.toUpperCase();
+      
+      if (val === "CHRISTMAS") {
+        document.body.classList.add("christmas-bg");
+        document.getElementById("passBox").style.display = "none";
+        document.getElementById("merryLabel").style.display = "block";
+        document.getElementById("lilyFlower").style.display = "flex";
+        
+        setTimeout(() => {
+            document.getElementById("seeLetterBtn").style.display = "block";
+        }, 3000);
+
+        startFireworks();
+      } else {
+        alert("Wrong Password");
+      }
+    }
+
+    // Fireworks
+    const canvas = document.getElementById('fwCanvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+
+    function resize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    class Particle {
+      constructor(x, y, color) {
+        this.x = x; this.y = y; this.color = color;
+        this.vel = { x: (Math.random() - 0.5) * 8, y: (Math.random() - 0.5) * 8 };
+        this.alpha = 1;
+      }
+      update() { this.x += this.vel.x; this.y += this.vel.y; this.alpha -= 0.02; }
+      draw() {
+        ctx.globalAlpha = this.alpha;
+        ctx.fillStyle = this.color;
+        ctx.beginPath(); ctx.arc(this.x, this.y, 2, 0, Math.PI*2); ctx.fill();
+      }
+    }
+
+    function animate() {
+      ctx.fillStyle = 'rgba(0,0,0,0.2)';
+      ctx.fillRect(0,0,canvas.width, canvas.height);
+      particles.forEach((p, i) => {
+        if(p.alpha <= 0) particles.splice(i, 1);
+        else { p.update(); p.draw(); }
+      });
+      requestAnimationFrame(animate);
+    }
+
+    function startFireworks() {
+      animate();
+      setInterval(() => {
+        const x = Math.random() * canvas.width;
+        const y = Math.random() * (canvas.height/2);
+        const col = `hsl(${Math.random()*360}, 100%, 70%)`;
+        playPop();
+        for(let i=0; i<30; i++) particles.push(new Particle(x, y, col));
+      }, 800);
+    }
+  </script>
+</body>
+  </html>
+  
